@@ -1,4 +1,4 @@
-const CACHE = 'bodega-cache-v1';
+const CACHE = 'bodega-cache-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -37,3 +37,4 @@ self.addEventListener('fetch', e=>{
     );
   }
 });
+
