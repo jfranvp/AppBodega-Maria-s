@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Bodega</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Incluye las librerías para la generación de PDF y gráficos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e0e5ec;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #4b5563;
+            overflow: hidden;
+        }
+        .neumorphic-card {
+            background: #e0e5ec;
+            border-radius: 2rem;
+            box-shadow: 9px 9px 16px #a3b1c6, -9px -9px 16px #ffffff;
+            transition: all 0.3s ease;
+        }
+        .neumorphic-inset {
+            background: #e0e5ec;
+            border-radius: 1rem;
+            box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff;
+        }
+        .neumorphic-button {
+            background: #e0e5ec;
+            border-radius: 50%;
+            width: 4rem;
+            height: 4rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 5px 5px 10px #a3b1c6, -5px -5px 10px #ffffff;
+            transition: all 0.3s ease;
+        }
+        .neumorphic-button:active {
+            box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff;
+        }
+        .neumorphic-text-input {
+            background: #e0e5ec;
+            border-radius: 0.75rem;
+            box-shadow: inset 2px 2px 5px #a3b1c6, inset -2px -2px 5px #ffffff;
+            padding: 0.75rem;
+            width: 100%;
+            outline: none;
+            border: none;
+        }
+        .active-tab {
+            box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff;
+            color: #3b82f6;
+        }
+        .payment-button {
+            background: #e0e5ec;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            box-shadow: 5px 5px 10px #a3b1c6, -5px -5px 10px #ffffff;
+            transition: all 0.3s ease;
+        }
+        .payment-button.active {
+            box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff;
+            color: #3b82f6;
+        }
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100%;
+            background: #e0e5ec;
+            box-shadow: 9px 9px 16px #a3b1c6, -9px -9px 16px #ffffff;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 50;
+        }
+        .side-menu.open {
+            transform: translateX(0);
+        }
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 40;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .menu-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .autocomplete-container {
+            position: relative;
+            width: 100%;
+        }
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            background: #e0e5ec;
+            border-radius: 0.75rem;
+            box-shadow: 5px 5px 10px #a3b1c6, -5px -5px 10px #ffffff;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .autocomplete-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .autocomplete-item:hover {
+            background-color: #d1d9e6;
+        }
+        /* Nueva clase para las pestañas */
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #e0e5ec;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 9px 9px 16px #a3b1c6, -9px -9px 16px #ffffff;
+            width: 90%;
+            max-width: 500px;
+        }
+        .message-modal {
+            position: fixed;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #e0e5ec;
+            border-radius: 1rem;
+            box-shadow: 5px 5px 10px #a3b1c6, -5px -5px 10px #ffffff;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            z-index: 99;
+        }
+        .message-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="bg-[#e0e5ec] text-gray-600">
+    <!-- Contenedor principal de la aplicación -->
+    <div class="neumorphic-card w-[95%] max-w-2xl h-[95vh] flex flex-col p-6 space-y-6">
+        <!-- Header con el nombre de la bodega y el botón de menú -->
+        <header class="flex justify-between items-center pb-4 border-b border-gray-300">
+            <h1 class="text-3xl font-bold tracking-tight">Bodega Maria's</h1>
+            <div id="menu-button" class="neumorphic-button cursor-pointer">
+                <svg xmlns="http://www.w3.0/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+            </div>
+        </header>
+        <!-- Contenedor principal de módulos -->
+        <main class="flex-grow p-4 overflow-y-auto">
+            <!-- Módulo de Productos -->
+            <div id="module-productos" class="module active-module">
+                <h2 class="text-xl font-semibold mb-4">Gestión de Productos</h2>
+                <div class="neumorphic-inset p-4 mb-4">
+                    <input type="text" placeholder="Buscar producto..." class="neumorphic-text-input mb-4">
+                    <div id="products-list" class="space-y-3 max-h-56 overflow-y-auto">
+                        <!-- Los productos se cargarán dinámicamente desde Firestore -->
+                    </div>
+                </div>
+                <!-- Formulario para agregar producto -->
+                <div class="neumorphic-inset p-4 mt-4">
+                    <h3 class="font-semibold mb-2" id="form-title">Agregar Producto</h3>
+                    <input type="hidden" id="product-id">
+                    <div class="mb-2">
+                        <label for="product-name" class="text-sm font-medium mb-1">Nombre:</label>
+                        <input type="text" id="product-name" placeholder="Nombre del producto" class="neumorphic-text-input w-full">
+                    </div>
+                    <div class="mb-2">
+                        <label for="product-price" class="text-sm font-medium mb-1">Precio:</label>
+                        <input type="number" id="product-price" placeholder="Precio" class="neumorphic-text-input w-full">
+                    </div>
+                    <div class="mb-2">
+                        <label for="product-stock" class="text-sm font-medium mb-1">Stock (ej: 23.45):</label>
+                        <input type="text" id="product-stock" placeholder="Cantidad en stock" class="neumorphic-text-input w-full">
+                    </div>
+                    <div class="mb-2">
+                         <label for="stock-unit" class="text-sm font-medium mb-1">Unidad de medida:</label>
+                         <select id="stock-unit" class="neumorphic-text-input w-full">
+                             <option value="UN">Unidad</option>
+                             <option value="KG">Kilo</option>
+                         </select>
+                    </div>
+                    <div class="mb-2">
+                        <label for="product-expiry" class="text-sm font-medium mb-1">Fecha de Caducidad:</label>
+                        <input type="date" id="product-expiry" class="neumorphic-text-input w-full">
+                    </div>
+                </div>
+                <button id="submit-product-btn" class="neumorphic-button w-full h-12 rounded-full cursor-pointer transition-all duration-300 transform hover:scale-105 mt-4">
+                    <span id="submit-text" class="text-gray-500 font-medium">Agregar Producto</span>
+                </button>
+            </div>
+            <!-- Módulo de Ventas -->
+            <div id="module-ventas" class="module hidden">
+                <h2 class="text-xl font-semibold mb-4">Registro de Ventas</h2>
+                <div class="neumorphic-inset p-4">
+                    <div class="mb-4">
+                        <p class="text-sm font-medium mb-1">Fecha y Hora:</p>
+                        <p id="sale-datetime" class="neumorphic-text-input text-gray-500 font-medium"></p>
+                    </div>
+                    <div class="mb-4">
+                        <label for="search-product" class="text-sm font-medium mb-1">Producto:</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="search-product" placeholder="Escribe el producto" class="neumorphic-text-input w-full">
+                            <div id="autocomplete-list" class="autocomplete-list hidden"></div>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="quantity" class="text-sm font-medium mb-1">Cantidad:</label>
+                        <input type="number" id="quantity" value="1" min="0.01" step="0.01" class="neumorphic-text-input w-full">
+                    </div>
+                    <div class="mb-4">
+                        <label for="customer-name" class="text-sm font-medium mb-1">Cliente:</label>
+                        <input type="text" id="customer-name" placeholder="Nombre del cliente" class="neumorphic-text-input w-full">
+                    </div>
+                    <div class="flex space-x-2 mt-2">
+                        <button id="add-to-cart-btn" class="neumorphic-button w-full h-12 rounded-full cursor-pointer transition-all duration-300 transform hover:scale-105">
+                            <span class="text-gray-500 font-medium">Agregar</span>
+                        </button>
+                        <button id="record-sale-btn" class="neumorphic-button w-full h-12 rounded-full cursor-pointer transition-all duration-300 transform hover:scale-105">
+                            <span class="text-gray-500 font-medium">Venta</span>
+                        </button>
+                    </div>
+                    <div class="mt-4 flex justify-between space-x-2">
+                        <button id="payment-cash" class="payment-button active w-1/2">
+                            <span>Contado</span>
+                        </button>
+                        <button id="payment-credit" class="payment-button w-1/2">
+                            <span>Fiado</span>
+                        </button>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="font-medium mb-2">Resumen del Carrito</h3>
+                        <ul id="cart-summary" class="neumorphic-inset p-3 space-y-2">
+                            <!-- Items del carrito -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Módulo de Créditos (NUEVO) -->
+            <div id="module-creditos" class="module hidden">
+                <h2 class="text-xl font-semibold mb-4">Gestión de Créditos</h2>
+                <!-- Lista principal de deudas -->
+                <div id="credits-list-container" class="neumorphic-inset p-4">
+                    <p class="mb-4 text-sm text-gray-500">Haz clic en una deuda para ver el detalle y generar el PDF.</p>
+                    <ul id="credits-list" class="space-y-3 max-h-56 overflow-y-auto">
+                        <!-- Las deudas se cargarán dinámicamente -->
+                    </ul>
+                </div>
+
+                <!-- Vista de detalle de la deuda (inicialmente oculta) -->
+                <div id="credit-detail-container" class="hidden neumorphic-inset p-4 mt-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">Detalle de la Deuda</h3>
+                        <button id="close-detail-btn" class="neumorphic-button w-8 h-8 rounded-full">
+                            <svg xmlns="http://www.w3.0/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <p class="text-lg text-gray-500 mb-2">Cliente: <span id="detail-nombre-cliente" class="font-bold text-blue-600"></span></p>
+                    <p class="text-sm text-gray-500">Fecha: <span id="detail-fecha"></span> - Hora: <span id="detail-hora"></span></p>
+                    <div class="flex justify-between items-center mt-4 p-4 rounded-lg bg-gray-200">
+                        <span class="text-xl font-semibold">Total de la Deuda:</span>
+                        <span id="detail-total-deuda" class="text-2xl font-bold text-red-500"></span>
+                    </div>
+
+                    <h4 class="text-lg font-semibold text-gray-700 mt-4 mb-2">Productos Comprados:</h4>
+                    <ul id="detail-items-list" class="neumorphic-inset p-3 space-y-2 mb-4">
+                        <!-- Los productos se cargarán aquí -->
+                    </ul>
+                    <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mt-4">
+                        <button id="btn-generar-pdf" class="w-full md:w-auto px-6 py-3 bg-red-600 text-white font-bold rounded-full shadow-md hover:bg-red-700 transition duration-300 transform hover:scale-105">
+                            Generar PDF
+                        </button>
+                        <button id="btn-enviar-whatsapp" class="w-full md:w-auto px-6 py-3 bg-green-600 text-white font-bold rounded-full shadow-md hover:bg-green-700 transition duration-300 transform hover:scale-105">
+                            Enviar por WhatsApp
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Módulo de Reportes -->
+            <div id="module-reportes" class="module hidden">
+                <h2 class="text-xl font-semibold mb-4">Reportes de Negocio</h2>
+                <div class="neumorphic-inset p-4 space-y-4">
+                    <!-- Seccion de Ventas -->
+                    <div class="neumorphic-card p-4">
+                        <h3 class="font-medium text-lg mb-2">Resumen de Ventas</h3>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium">Ventas de Hoy:</span>
+                            <span id="sales-today" class="text-lg font-bold">S/ 0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium">Ventas de la Semana:</span>
+                            <span id="sales-week" class="text-lg font-bold">S/ 0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Ventas del Mes:</span>
+                            <span id="sales-month" class="text-lg font-bold">S/ 0.00</span>
+                        </div>
+                    </div>
+                    <!-- Seccion de Inventario bajo -->
+                    <div class="neumorphic-card p-4">
+                        <h3 class="font-medium text-lg mb-2">Inventario Bajo (Stock < 5)</h3>
+                        <ul id="low-stock-list" class="list-disc list-inside mt-2 space-y-1">
+                            <li class="text-gray-500">No hay productos con bajo stock.</li>
+                        </ul>
+                    </div>
+                    <!-- Seccion de Productos Más Vendidos -->
+                    <div class="neumorphic-card p-4">
+                        <h3 class="font-medium text-lg mb-2">Productos Más Vendidos</h3>
+                        <ul id="top-products-list" class="list-decimal list-inside mt-2 space-y-1">
+                            <li class="text-gray-500">No hay productos vendidos todavía.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Módulo de Clientes -->
+            <div id="module-clientes" class="module hidden">
+                <!-- Vista de lista de clientes -->
+                <div id="client-list-view">
+                    <h2 class="text-xl font-semibold mb-4">Gestión de Clientes</h2>
+                    <!-- Formulario para agregar/editar cliente -->
+                    <div class="neumorphic-inset p-4 mb-4">
+                        <h3 class="font-semibold mb-2" id="client-form-title">Agregar Cliente</h3>
+                        <input type="hidden" id="client-id">
+                        <div class="mb-2">
+                            <label for="client-name" class="text-sm font-medium mb-1">Nombre:</label>
+                            <input type="text" id="client-name" placeholder="Nombre completo" class="neumorphic-text-input w-full">
+                        </div>
+                        <div class="mb-2">
+                            <label for="client-phone" class="text-sm font-medium mb-1">Teléfono:</label>
+                            <input type="tel" id="client-phone" placeholder="Número de teléfono" class="neumorphic-text-input w-full">
+                        </div>
+                        <div class="mb-2">
+                            <label for="client-notes" class="text-sm font-medium mb-1">Notas:</label>
+                            <textarea id="client-notes" placeholder="Notas sobre el cliente" rows="3" class="neumorphic-text-input w-full"></textarea>
+                        </div>
+                        <button id="submit-client-btn" class="neumorphic-button w-full h-12 rounded-full cursor-pointer transition-all duration-300 transform hover:scale-105 mt-4">
+                            <span id="submit-client-text" class="text-gray-500 font-medium">Agregar Cliente</span>
+                        </button>
+                    </div>
+
+                    <!-- Búsqueda y lista de clientes -->
+                    <div class="neumorphic-inset p-4">
+                        <input type="text" id="search-client-input" placeholder="Buscar cliente..." class="neumorphic-text-input mb-4">
+                        <div id="clients-list" class="space-y-3 max-h-56 overflow-y-auto">
+                            <!-- Los clientes se cargarán dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vista de detalle del cliente (inicialmente oculta) -->
+                <div id="client-detail-view" class="hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <button id="back-to-clients-btn" class="neumorphic-button w-8 h-8 rounded-full">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                             </svg>
+                        </button>
+                        <h2 class="text-xl font-semibold" id="client-detail-name"></h2>
+                        <div class="flex space-x-2">
+                            <button id="edit-client-detail-btn" class="neumorphic-button w-8 h-8 rounded-full">
+                                <svg xmlns="http://www.w3.0/2000/svg" class="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                            </button>
+                            <button id="delete-client-detail-btn" class="neumorphic-button w-8 h-8 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="neumorphic-inset p-4 mb-4">
+                        <p class="text-sm">Teléfono: <span id="client-detail-phone" class="font-semibold"></span></p>
+                        <p class="text-sm mt-1">Notas: <span id="client-detail-notes" class="font-semibold"></span></p>
+                    </div>
+
+                    <!-- Pestañas de historial y créditos -->
+                    <div class="flex justify-center space-x-4 mb-4">
+                        <button id="tab-historial" class="tab-button neumorphic-card active">Historial de Compras</button>
+                        <button id="tab-creditos-cliente" class="tab-button neumorphic-card">Créditos</button>
+                    </div>
+
+                    <div id="historial-content" class="tab-content active neumorphic-inset p-4 max-h-56 overflow-y-auto">
+                        <ul id="client-sales-history" class="space-y-3">
+                            <!-- Historial de compras se carga aquí -->
+                        </ul>
+                    </div>
+
+                    <div id="creditos-cliente-content" class="tab-content neumorphic-inset p-4 max-h-56 overflow-y-auto">
+                        <ul id="client-credits" class="space-y-3">
+                            <!-- Créditos del cliente se cargan aquí -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!-- Menú lateral -->
+    <div id="side-menu" class="side-menu p-6">
+        <h2 class="text-2xl font-bold mb-6">Menú</h2>
+        <nav class="flex flex-col space-y-6">
+            <div class="neumorphic-button h-16 w-full rounded-2xl flex-grow flex-row justify-start space-x-4 items-center pl-6 cursor-pointer hover:scale-[1.02] transition-transform duration-200" data-module="productos">
+                <svg xmlns="http://www.w3.0/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zm-7 10h2a2 2 0 002-2v-2a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z" />
+                </svg>
+                <span class="text-lg font-medium">Productos</span>
+            </div>
+            <div class="neumorphic-button h-16 w-full rounded-2xl flex-grow flex-row justify-start space-x-4 items-center pl-6 cursor-pointer hover:scale-[1.02] transition-transform duration-200" data-module="ventas">
+                <svg xmlns="http://www.w3.0/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                <span class="text-lg font-medium">Ventas</span>
+            </div>
+            <!-- Nuevo botón para el módulo de Créditos -->
+            <div class="neumorphic-button h-16 w-full rounded-2xl flex-grow flex-row justify-start space-x-4 items-center pl-6 cursor-pointer hover:scale-[1.02] transition-transform duration-200" data-module="creditos">
+                <svg xmlns="http://www.w3.0/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8a4 4 0 00-4 4v2m4-2a4 4 0 014 4v2m-4-2c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z" />
+                </svg>
+                <span class="text-lg font-medium">Créditos</span>
+            </div>
+            <div class="neumorphic-button h-16 w-full rounded-2xl flex-grow flex-row justify-start space-x-4 items-center pl-6 cursor-pointer hover:scale-[1.02] transition-transform duration-200" data-module="reportes">
+                <svg xmlns="http://www.w3.0/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span class="text-lg font-medium">Reportes</span>
+            </div>
+            <div class="neumorphic-button h-16 w-full rounded-2xl flex-grow flex-row justify-start space-x-4 items-center pl-6 cursor-pointer hover:scale-[1.02] transition-transform duration-200" data-module="clientes">
+                <svg xmlns="http://www.w3.0/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span class="text-lg font-medium">Clientes</span>
+            </div>
+        </nav>
+    </div>
+    <!-- Capa de fondo que se activa con el menú -->
+    <div id="menu-overlay" class="menu-overlay"></div>
+    
+    <!-- Modal para el mensaje de WhatsApp -->
+    <div id="whatsapp-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">Mensaje de Deuda</h3>
+            <p class="text-sm mb-2">Copia el siguiente mensaje o abre WhatsApp directamente:</p>
+            <textarea id="whatsapp-message-text" rows="8" readonly class="neumorphic-text-input w-full p-4"></textarea>
+            <div class="flex flex-col space-y-2 mt-4">
+                <a id="open-whatsapp-btn" href="#" target="_blank" class="w-full px-6 py-3 bg-green-600 text-white font-bold rounded-full shadow-md hover:bg-green-700 transition duration-300 transform hover:scale-105 text-center">
+                    Abrir en WhatsApp
+                </a>
+                <button id="copy-whatsapp-message-btn" class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-full shadow-md hover:bg-blue-700 transition duration-300 transform hover:scale-105">
+                    Copiar Mensaje
+                </button>
+            </div>
+            <button id="close-whatsapp-modal-btn" class="w-full mt-4 px-6 py-3 bg-gray-400 text-white font-bold rounded-full shadow-md hover:bg-gray-500 transition duration-300 transform hover:scale-105">
+                Cerrar
+            </button>
+        </div>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, setLogLevel, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Establecer el nivel de registro para depuración
+        setLogLevel('Debug');
+
+        let app;
+        let db;
+        let auth;
+        let userId = null;
+        let allProducts = [];
+        let allCredits = [];
+        let allSales = [];
+        let allClients = [];
+        let cart = [];
+        let currentCreditForPDF = null;
+        let currentClient = null;
+
+        // Variables de entorno proporcionadas por la plataforma
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' && __firebase_config ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyBR3v-yFqlNuBKi6BbvSy_M58wtDUTMNYM",
+            authDomain: "bodega-app-578fc.firebaseapp.com",
+            projectId: "bodega-app-578fc",
+            storageBucket: "bodega-app-578fc.firebasestorage.app",
+            messagingSenderId: "309462945725",
+            appId: "1:309462945725:web:c0af65b25067ecaba88cd4",
+            measurementId: "G-C9WDH0P1SP"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Inicializar Firebase si la configuración existe
+        if (firebaseConfig && firebaseConfig.projectId && firebaseConfig.projectId !== "fake-project-id") {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } catch (e) {
+                console.error("Error al inicializar Firebase. La configuración puede ser inválida.", e);
+            }
+        } else {
+            console.warn("Saltando la inicialización de Firebase. La aplicación funcionará solo localmente.");
+        }
+
+        // Autenticación de usuario
+        const authenticateUser = async () => {
+            if (!auth) {
+                console.error("El servicio de autenticación no está disponible.");
+                return null;
+            }
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                userId = auth.currentUser?.uid || crypto.randomUUID();
+                console.log("Usuario autenticado. UID:", userId);
+                return userId;
+            } catch (error) {
+                console.error("Error al autenticar:", error);
+                return null;
+            }
+        };
+
+        // Función para guardar o actualizar un producto
+        async function saveOrUpdateProduct() {
+            if (!userId || !db) {
+                console.error("Usuario no autenticado o base de datos no disponible. No se puede guardar/actualizar el producto.");
+                return;
+            }
+            const productId = document.getElementById('product-id').value;
+            const name = document.getElementById('product-name').value;
+            const price = parseFloat(document.getElementById('product-price').value);
+            const stock = parseFloat(document.getElementById('product-stock').value);
+            const expiry = document.getElementById('product-expiry').value;
+            const unit = document.getElementById('stock-unit').value;
+
+            if (name && !isNaN(price) && !isNaN(stock) && expiry && unit) {
+                try {
+                    const productsCollection = collection(db, `artifacts/${appId}/users/${userId}/products`);
+                    const productData = { name, price, stock, expiry, unit };
+
+                    if (productId) {
+                        const productRef = doc(productsCollection, productId);
+                        await updateDoc(productRef, productData);
+                        console.log("Producto actualizado con éxito!");
+                    } else {
+                        await addDoc(productsCollection, { ...productData, createdAt: new Date() });
+                        console.log("Producto agregado con éxito!");
+                    }
+                    resetForm();
+                } catch (error) {
+                    console.error("Error al guardar/actualizar el producto:", error);
+                }
+            } else {
+                console.error("Por favor, completa todos los campos del formulario con valores válidos.");
+            }
+        }
+
+        // Función para eliminar un producto de Firestore
+        async function deleteProduct(productId) {
+            if (!userId || !db) {
+                console.error("Usuario no autenticado o base de datos no disponible. No se puede eliminar el producto.");
+                return;
+            }
+            try {
+                const productRef = doc(db, `artifacts/${appId}/users/${userId}/products`, productId);
+                await deleteDoc(productRef);
+                console.log("Producto eliminado con éxito:", productId);
+            } catch (error) {
+                console.error("Error al eliminar el producto:", error);
+            }
+        }
+
+        // Función para cargar los datos de un producto en el formulario para editar
+        function editProduct(product) {
+            document.getElementById('form-title').innerText = 'Editar Producto';
+            document.getElementById('submit-text').innerText = 'Actualizar Producto';
+            document.getElementById('product-id').value = product.id;
+            document.getElementById('product-name').value = product.name;
+            document.getElementById('product-price').value = product.price;
+            document.getElementById('product-stock').value = product.stock;
+            document.getElementById('product-expiry').value = product.expiry;
+            document.getElementById('stock-unit').value = product.unit || 'UN';
+        }
+
+        // Función para limpiar y resetear el formulario
+        function resetForm() {
+            document.getElementById('form-title').innerText = 'Agregar Producto';
+            document.getElementById('submit-text').innerText = 'Agregar Producto';
+            document.getElementById('product-id').value = '';
+            document.getElementById('product-name').value = '';
+            document.getElementById('product-price').value = '';
+            document.getElementById('product-stock').value = '';
+            document.getElementById('product-expiry').value = '';
+            document.getElementById('stock-unit').value = 'UN';
+        }
+
+        // Función para mostrar los productos en la interfaz
+        function displayProducts(products) {
+            const productsList = document.getElementById('products-list');
+            productsList.innerHTML = '';
+            products.forEach(product => {
+                const productDiv = document.createElement('div');
+                productDiv.className = 'neumorphic-card p-3 flex justify-between items-center text-sm cursor-pointer';
+                productDiv.dataset.id = product.id;
+                productDiv.innerHTML = `
+                    <div class="flex flex-col flex-grow" onclick="editProductFromList('${product.id}')">
+                        <span class="font-bold">${product.name}</span>
+                        <span class="text-xs text-gray-500">Stock: ${product.stock} ${product.unit}</span>
+                        <span class="text-xs text-gray-500">Caducidad: ${product.expiry}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                         <span class="font-bold">S/ ${product.price.toFixed(2)}</span>
+                         <button class="delete-product-btn p-2 rounded-full neumorphic-button hover:bg-red-400">
+                           <svg xmlns="http://www.w3.0/2000/svg" class="h-4 w-4 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 112 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+                           </svg>
+                         </button>
+                    </div>
+                `;
+                productsList.appendChild(productDiv);
+            });
+            document.querySelectorAll('.delete-product-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = event.target.closest('.neumorphic-card').dataset.id;
+                    deleteProduct(productId);
+                });
+            });
+            window.products = products;
+        }
+
+        // Esta función se llama desde el HTML para cargar los datos de edición
+        window.editProductFromList = (productId) => {
+            const productToEdit = window.products.find(p => p.id === productId);
+            if (productToEdit) {
+                editProduct(productToEdit);
+            }
+        };
+
+        // Venta - Lógica de autocompletado y carrito
+        const searchInput = document.getElementById('search-product');
+        const autocompleteList = document.getElementById('autocomplete-list');
+        const quantityInput = document.getElementById('quantity');
+        const addToCartBtn = document.getElementById('add-to-cart-btn');
+        const cartSummary = document.getElementById('cart-summary');
+        const recordSaleBtn = document.getElementById('record-sale-btn');
+        let selectedProduct = null;
+
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            autocompleteList.innerHTML = '';
+            if (query.length > 1) {
+                const filteredProducts = allProducts.filter(p => p.name.toLowerCase().includes(query));
+                if (filteredProducts.length > 0) {
+                    autocompleteList.classList.remove('hidden');
+                    filteredProducts.forEach(product => {
+                        const item = document.createElement('div');
+                        item.className = 'autocomplete-item';
+                        item.innerText = product.name;
+                        item.addEventListener('click', () => {
+                            searchInput.value = product.name;
+                            selectedProduct = product;
+                            autocompleteList.classList.add('hidden');
+                        });
+                        autocompleteList.appendChild(item);
+                    });
+                } else {
+                    autocompleteList.classList.add('hidden');
+                }
+            } else {
+                autocompleteList.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.autocomplete-container')) {
+                autocompleteList.classList.add('hidden');
+            }
+        });
+
+        // Agregar producto al carrito
+        addToCartBtn.addEventListener('click', () => {
+            if (!selectedProduct) {
+                console.error("No se ha seleccionado un producto.");
+                return;
+            }
+            // Redondear la cantidad a 2 decimales
+            const quantity = parseFloat(parseFloat(quantityInput.value).toFixed(2));
+            if (isNaN(quantity) || quantity <= 0) {
+                console.error("Cantidad inválida. Por favor, introduce un número positivo.");
+                return;
+            }
+            if (quantity > selectedProduct.stock) {
+                console.error("Cantidad en stock insuficiente.");
+                return;
+            }
+
+            const existingItemIndex = cart.findIndex(item => item.id === selectedProduct.id);
+            if (existingItemIndex > -1) {
+                const newQuantity = parseFloat(cart[existingItemIndex].quantity) + quantity;
+                if (newQuantity > selectedProduct.stock) {
+                     console.error("La cantidad total excede el stock disponible.");
+                     return;
+                }
+                cart[existingItemIndex].quantity = parseFloat(newQuantity.toFixed(2));
+            } else {
+                cart.push({
+                    id: selectedProduct.id,
+                    name: selectedProduct.name,
+                    price: selectedProduct.price,
+                    quantity: quantity,
+                    unit: selectedProduct.unit
+                });
+            }
+            renderCart();
+            resetSaleForm();
+        });
+
+        function renderCart() {
+            cartSummary.innerHTML = '';
+            let total = 0;
+            if (cart.length === 0) {
+                cartSummary.innerHTML = '<li class="text-sm text-gray-400">El carrito está vacío.</li>';
+                return;
+            }
+            cart.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'neumorphic-card p-2 flex justify-between items-center text-sm';
+                const subtotal = item.price * item.quantity;
+                li.innerHTML = `
+                    <span>${item.name} x ${item.quantity} ${item.unit}</span>
+                    <span class="font-bold">S/ ${subtotal.toFixed(2)}</span>
+                `;
+                total += subtotal;
+                cartSummary.appendChild(li);
+            });
+            const totalLi = document.createElement('li');
+            totalLi.className = 'mt-2 border-t pt-2 border-gray-300 flex justify-between items-center text-base font-bold';
+            totalLi.innerHTML = `
+                <span>Total:</span>
+                <span>S/ ${total.toFixed(2)}</span>
+            `;
+            cartSummary.appendChild(totalLi);
+        }
+
+        function resetSaleForm() {
+            searchInput.value = '';
+            quantityInput.value = '1';
+            selectedProduct = null;
+            autocompleteList.classList.add('hidden');
+        }
+
+        // Registrar venta
+        recordSaleBtn.addEventListener('click', async () => {
+            if (cart.length === 0) {
+                console.error("El carrito está vacío. Agregue productos para registrar una venta.");
+                return;
+            }
+            if (!userId || !db) {
+                console.error("Usuario no autenticado o base de datos no disponible. No se puede registrar la venta.");
+                return;
+            }
+
+            const customerName = document.getElementById('customer-name').value || 'Cliente Anónimo';
+            const paymentType = document.querySelector('.payment-button.active').innerText.trim();
+            const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+            try {
+                // Registrar la venta en la colección de ventas
+                const salesCollection = collection(db, `artifacts/${appId}/users/${userId}/sales`);
+                const saleData = {
+                    customerName: customerName,
+                    paymentType: paymentType,
+                    items: cart,
+                    total: total,
+                    timestamp: new Date()
+                };
+                await addDoc(salesCollection, saleData);
+
+                // Si el tipo de pago es "Fiado", registrar en la colección de créditos
+                if (paymentType === 'Fiado') {
+                    const creditsCollection = collection(db, `artifacts/${appId}/users/${userId}/credits`);
+                    const creditData = {
+                        customerName: customerName,
+                        total: total,
+                        items: cart,
+                        timestamp: new Date()
+                    };
+                    await addDoc(creditsCollection, creditData);
+                }
+
+                // Actualizar el stock de cada producto en el carrito
+                const productsCollection = collection(db, `artifacts/${appId}/users/${userId}/products`);
+                for (const item of cart) {
+                    const productRef = doc(productsCollection, item.id);
+                    const currentProduct = allProducts.find(p => p.id === item.id);
+                    if (currentProduct) {
+                         const newStock = parseFloat(currentProduct.stock) - parseFloat(item.quantity);
+                         if (newStock >= 0) {
+                            await updateDoc(productRef, { stock: newStock });
+                         }
+                    }
+                }
+
+                // Limpiar el carrito y el formulario
+                cart = [];
+                renderCart();
+                resetSaleForm();
+                console.log("Venta registrada y stock actualizado con éxito.");
+            } catch (error) {
+                console.error("Error al registrar la venta:", error);
+            }
+        });
+
+
+        // Función para escuchar los cambios en la colección de productos en tiempo real
+        async function listenForProducts() {
+            if (!userId || !db) return;
+            const productsCollection = collection(db, `artifacts/${appId}/users/${userId}/products`);
+            onSnapshot(productsCollection, (snapshot) => {
+                const products = [];
+                snapshot.forEach(doc => {
+                    products.push({ id: doc.id, ...doc.data() });
+                });
+                allProducts = products;
+                displayProducts(products);
+                updateReports(); // Llama a la funcion de reportes al actualizar los productos
+                console.log("Inventario sincronizado con la base de datos.");
+            });
+        }
+
+        // Función para escuchar los cambios en la colección de créditos
+        async function listenForCredits() {
+            if (!userId || !db) return;
+            const creditsCollection = collection(db, `artifacts/${appId}/users/${userId}/credits`);
+            onSnapshot(creditsCollection, (snapshot) => {
+                const credits = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const timestamp = data.timestamp ? data.timestamp.toDate() : new Date();
+                    credits.push({ id: doc.id, ...data, timestamp });
+                });
+                allCredits = credits;
+                displayCredits(credits);
+                console.log("Créditos sincronizados con la base de datos.");
+            });
+        }
+
+        // Función para mostrar los créditos en la interfaz
+        function displayCredits(credits) {
+            const creditsList = document.getElementById('credits-list');
+            creditsList.innerHTML = '';
+            if (credits.length === 0) {
+                creditsList.innerHTML = '<li class="text-sm text-gray-400">No hay deudas pendientes.</li>';
+                return;
+            }
+            credits.forEach(credit => {
+                const li = document.createElement('li');
+                li.className = 'neumorphic-card p-3 flex justify-between items-center text-sm cursor-pointer hover:bg-gray-100 transition-all duration-200';
+                li.dataset.creditId = credit.id;
+                const date = credit.timestamp.toLocaleDateString('es-PE');
+                const time = credit.timestamp.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+
+                li.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-bold">${credit.customerName}</span>
+                        <span class="text-xs text-gray-500">Deuda: S/ ${credit.total.toFixed(2)}</span>
+                        <span class="text-xs text-gray-500">Fecha: ${date} - ${time}</span>
+                    </div>
+                    <button class="pay-credit-btn neumorphic-button p-2 rounded-full h-8 w-8 text-green-500 hover:bg-green-400" data-credit-id="${credit.id}">
+                         <svg xmlns="http://www.w3.0/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                         </svg>
+                    </button>
+                `;
+                creditsList.appendChild(li);
+            });
+
+            // Lógica para mostrar el detalle al hacer clic
+            creditsList.querySelectorAll('li').forEach(item => {
+                item.addEventListener('click', (event) => {
+                    const creditId = item.dataset.creditId;
+                    const credit = allCredits.find(c => c.id === creditId);
+                    if (credit && !event.target.closest('.pay-credit-btn')) {
+                        showCreditDetails(credit);
+                    }
+                });
+            });
+
+            // Lógica para marcar como pagado
+            document.querySelectorAll('.pay-credit-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const creditId = event.target.closest('button').dataset.creditId;
+                    payCredit(creditId);
+                });
+            });
+        }
+
+        // Función para mostrar la vista de detalle de un crédito
+        function showCreditDetails(credit) {
+            currentCreditForPDF = credit;
+            document.getElementById('credits-list-container').classList.add('hidden');
+            document.getElementById('credit-detail-container').classList.remove('hidden');
+
+            document.getElementById('detail-nombre-cliente').textContent = credit.customerName;
+            document.getElementById('detail-total-deuda').textContent = `S/ ${credit.total.toFixed(2)}`;
+            document.getElementById('detail-fecha').textContent = credit.timestamp.toLocaleDateString('es-PE');
+            document.getElementById('detail-hora').textContent = credit.timestamp.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+
+            const detailItemsList = document.getElementById('detail-items-list');
+            detailItemsList.innerHTML = '';
+
+            // Verificar si credit.items es un array antes de usar forEach
+            if (Array.isArray(credit.items)) {
+                credit.items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'neumorphic-card p-2 flex justify-between items-center text-sm';
+                    const subtotal = item.price * item.quantity;
+                    li.innerHTML = `
+                        <span>${item.name} x ${item.quantity} ${item.unit}</span>
+                        <span class="font-bold">S/ ${subtotal.toFixed(2)}</span>
+                    `;
+                    detailItemsList.appendChild(li);
+                });
+            } else {
+                detailItemsList.innerHTML = '<li class="text-sm text-gray-400">Detalle de productos no disponible.</li>';
+            }
+        }
+
+        // Función para marcar un crédito como pagado (eliminarlo)
+        async function payCredit(creditId) {
+            if (!userId || !db) {
+                console.error("Usuario no autenticado o base de datos no disponible. No se puede marcar como pagado.");
+                return;
+            }
+            try {
+                const creditRef = doc(db, `artifacts/${appId}/users/${userId}/credits`, creditId);
+                await deleteDoc(creditRef);
+                console.log("Crédito pagado y eliminado con éxito:", creditId);
+            } catch (error) {
+                console.error("Error al marcar como pagado el crédito:", error);
+            }
+        }
+
+        // Función para generar el PDF
+        function generarPDF() {
+            if (!currentCreditForPDF) {
+                showMessage("No hay datos de crédito para generar el PDF.");
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                doc.setFontSize(22);
+                doc.text('Detalle de la Deuda', 14, 20);
+                doc.setFontSize(14);
+                doc.text(`Cliente: ${currentCreditForPDF.customerName}`, 14, 30);
+                doc.text('A continuación se detalla el desglose de las transacciones de su cuenta.', 14, 40);
+
+                const tableData = Array.isArray(currentCreditForPDF.items) ? currentCreditForPDF.items.map(item => [
+                    currentCreditForPDF.timestamp.toLocaleDateString('es-PE'),
+                    currentCreditForPDF.timestamp.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+                    `${item.name} (${item.quantity} ${item.unit})`,
+                    `S/ ${(item.price * item.quantity).toFixed(2)}`
+                ]) : [];
+
+                doc.autoTable({
+                    startY: 50,
+                    head: [['Fecha', 'Hora', 'Descripción', 'Monto']],
+                    body: tableData,
+                    theme: 'striped',
+                    headStyles: { fillColor: [52, 143, 226] },
+                    styles: { font: 'helvetica' },
+                });
+
+                const finalY = doc.autoTable.previous.finalY + 10;
+                doc.setFontSize(16);
+                doc.text(`Total de la Deuda: S/ ${currentCreditForPDF.total.toFixed(2)}`, 14, finalY);
+
+                doc.save(`deuda_${currentCreditForPDF.customerName.replace(/\s/g, '_')}.pdf`);
+
+                showMessage('El PDF se ha generado correctamente y se está descargando.');
+            } catch (error) {
+                console.error('Error al generar el PDF:', error);
+                showMessage('Hubo un error al generar el PDF. Por favor, inténtelo de nuevo.');
+            }
+        }
+
+        // Funciones del módulo de reportes
+        async function listenForSales() {
+            if (!userId || !db) return;
+            const salesCollection = collection(db, `artifacts/${appId}/users/${userId}/sales`);
+            onSnapshot(salesCollection, (snapshot) => {
+                const sales = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const timestamp = data.timestamp ? data.timestamp.toDate() : new Date();
+                    sales.push({ id: doc.id, ...data, timestamp });
+                });
+                allSales = sales;
+                updateReports(); // Llama a la funcion de reportes
+                console.log("Ventas sincronizadas con la base de datos.");
+            });
+        }
+
+        // Actualiza el módulo de reportes con datos de ventas y productos
+        function updateReports() {
+            if (allSales.length > 0) {
+                const today = new Date();
+                const weekAgo = new Date(today);
+                weekAgo.setDate(today.getDate() - 7);
+                const monthAgo = new Date(today);
+                monthAgo.setMonth(today.getMonth() - 1);
+
+                let salesToday = 0;
+                let salesWeek = 0;
+                let salesMonth = 0;
+
+                allSales.forEach(sale => {
+                    if (sale.timestamp > weekAgo) {
+                        salesWeek += sale.total;
+                        if (sale.timestamp.getDate() === today.getDate() && sale.timestamp.getMonth() === today.getMonth() && sale.timestamp.getFullYear() === today.getFullYear()) {
+                            salesToday += sale.total;
+                        }
+                    }
+                    if (sale.timestamp > monthAgo) {
+                        salesMonth += sale.total;
+                    }
+                });
+
+                document.getElementById('sales-today').innerText = `S/ ${salesToday.toFixed(2)}`;
+                document.getElementById('sales-week').innerText = `S/ ${salesWeek.toFixed(2)}`;
+                document.getElementById('sales-month').innerText = `S/ ${salesMonth.toFixed(2)}`;
+            }
+
+            // Mostrar productos con bajo stock
+            const lowStockList = document.getElementById('low-stock-list');
+            lowStockList.innerHTML = '';
+            const lowStockProducts = allProducts.filter(p => p.stock < 5);
+            if (lowStockProducts.length > 0) {
+                lowStockProducts.forEach(product => {
+                    const li = document.createElement('li');
+                    li.className = 'text-red-500';
+                    li.innerText = `${product.name} (Stock: ${product.stock} ${product.unit})`;
+                    lowStockList.appendChild(li);
+                });
+            } else {
+                lowStockList.innerHTML = '<li class="text-gray-500">No hay productos con bajo stock.</li>';
+            }
+
+            // Actualiza la lista de productos más vendidos
+            updateTopProductsList();
+        }
+
+        // Función para actualizar la lista de productos más vendidos
+        function updateTopProductsList() {
+            const topProductsList = document.getElementById('top-products-list');
+            topProductsList.innerHTML = '';
+
+            const productSales = new Map();
+            allSales.forEach(sale => {
+                if (Array.isArray(sale.items)) {
+                    sale.items.forEach(item => {
+                        const currentSales = productSales.get(item.id) || 0;
+                        productSales.set(item.id, currentSales + item.quantity);
+                    });
+                }
+            });
+
+            if (productSales.size === 0) {
+                topProductsList.innerHTML = '<li class="text-gray-500">No hay productos vendidos todavía.</li>';
+                return;
+            }
+
+            const sortedProducts = Array.from(productSales.entries())
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            sortedProducts.forEach(([productId, quantity]) => {
+                const product = allProducts.find(p => p.id === productId);
+                if (product) {
+                    const li = document.createElement('li');
+                    li.className = 'text-gray-500';
+                    li.innerText = `${product.name} (${quantity} ${product.unit} vendidos)`;
+                    topProductsList.appendChild(li);
+                }
+            });
+        }
+
+        // === MÓDULO DE CLIENTES ===
+
+        // Función para guardar o actualizar un cliente
+        async function saveOrUpdateClient() {
+            if (!userId || !db) return;
+            const clientId = document.getElementById('client-id').value;
+            const name = document.getElementById('client-name').value;
+            const phone = document.getElementById('client-phone').value;
+            const notes = document.getElementById('client-notes').value;
+
+            if (name) {
+                try {
+                    const clientsCollection = collection(db, `artifacts/${appId}/users/${userId}/clients`);
+                    const clientData = { name, phone, notes, createdAt: new Date() };
+
+                    if (clientId) {
+                        const clientRef = doc(clientsCollection, clientId);
+                        await updateDoc(clientRef, clientData);
+                        console.log("Cliente actualizado con éxito!");
+                    } else {
+                        await addDoc(clientsCollection, clientData);
+                        console.log("Cliente agregado con éxito!");
+                    }
+                    resetClientForm();
+                } catch (error) {
+                    console.error("Error al guardar/actualizar cliente:", error);
+                }
+            } else {
+                console.error("El nombre del cliente es obligatorio.");
+            }
+        }
+
+        // Función para eliminar un cliente
+        async function deleteClient(clientId) {
+            if (!userId || !db) return;
+            try {
+                const clientRef = doc(db, `artifacts/${appId}/users/${userId}/clients`, clientId);
+                await deleteDoc(clientRef);
+                console.log("Cliente eliminado con éxito!");
+            } catch (error) {
+                console.error("Error al eliminar cliente:", error);
+            }
+        }
+
+        // Función para cargar los datos de un cliente para editar
+        function editClient(client) {
+            document.getElementById('client-form-title').innerText = 'Editar Cliente';
+            document.getElementById('submit-client-text').innerText = 'Actualizar Cliente';
+            document.getElementById('client-id').value = client.id;
+            document.getElementById('client-name').value = client.name;
+            document.getElementById('client-phone').value = client.phone;
+            document.getElementById('client-notes').value = client.notes;
+        }
+
+        // Función para resetear el formulario de cliente
+        function resetClientForm() {
+            document.getElementById('client-form-title').innerText = 'Agregar Cliente';
+            document.getElementById('submit-client-text').innerText = 'Agregar Cliente';
+            document.getElementById('client-id').value = '';
+            document.getElementById('client-name').value = '';
+            document.getElementById('client-phone').value = '';
+            document.getElementById('client-notes').value = '';
+        }
+
+        // Escucha los cambios en la colección de clientes
+        async function listenForClients() {
+            if (!userId || !db) return;
+            const clientsCollection = collection(db, `artifacts/${appId}/users/${userId}/clients`);
+            onSnapshot(clientsCollection, (snapshot) => {
+                const clients = [];
+                snapshot.forEach(doc => {
+                    clients.push({ id: doc.id, ...doc.data() });
+                });
+                allClients = clients;
+                displayClients(clients);
+                console.log("Clientes sincronizados con la base de datos.");
+            });
+        }
+
+        // Muestra la lista de clientes con búsqueda
+        function displayClients(clients) {
+            const clientsList = document.getElementById('clients-list');
+            const searchInput = document.getElementById('search-client-input').value.toLowerCase();
+            clientsList.innerHTML = '';
+            const filteredClients = clients.filter(client => client.name.toLowerCase().includes(searchInput));
+
+            if (filteredClients.length === 0) {
+                clientsList.innerHTML = '<li class="text-sm text-gray-400">No se encontraron clientes.</li>';
+                return;
+            }
+
+            filteredClients.forEach(client => {
+                const clientDiv = document.createElement('div');
+                clientDiv.className = 'neumorphic-card p-3 flex justify-between items-center text-sm cursor-pointer hover:bg-gray-100 transition-all duration-200';
+                clientDiv.dataset.id = client.id;
+                clientDiv.innerHTML = `
+                    <div class="flex flex-col flex-grow">
+                        <span class="font-bold">${client.name}</span>
+                        <span class="text-xs text-gray-500">${client.phone || 'Sin teléfono'}</span>
+                    </div>
+                `;
+                clientDiv.addEventListener('click', () => showClientDetails(client));
+                clientsList.appendChild(clientDiv);
+            });
+        }
+
+        // Función para mostrar la vista de detalles del cliente
+        async function showClientDetails(client) {
+            currentClient = client;
+            document.getElementById('client-list-view').classList.add('hidden');
+            document.getElementById('client-detail-view').classList.remove('hidden');
+
+            document.getElementById('client-detail-name').textContent = client.name;
+            document.getElementById('client-detail-phone').textContent = client.phone || 'N/A';
+            document.getElementById('client-detail-notes').textContent = client.notes || 'No hay notas.';
+
+            // Mostrar el historial de ventas por defecto
+            await loadClientSalesHistory();
+        }
+
+        // Función para cargar el historial de ventas del cliente
+        async function loadClientSalesHistory() {
+            const clientSalesHistory = document.getElementById('client-sales-history');
+            clientSalesHistory.innerHTML = '<li class="text-sm text-gray-400">Cargando historial...</li>';
+
+            const q = query(collection(db, `artifacts/${appId}/users/${userId}/sales`), where("customerName", "==", currentClient.name));
+            const salesSnapshot = await getDocs(q);
+            const sales = [];
+            salesSnapshot.forEach(doc => sales.push({ id: doc.id, ...doc.data() }));
+
+            clientSalesHistory.innerHTML = '';
+            if (sales.length === 0) {
+                clientSalesHistory.innerHTML = '<li class="text-sm text-gray-400">No hay compras registradas para este cliente.</li>';
+            } else {
+                sales.forEach(sale => {
+                    const li = document.createElement('li');
+                    li.className = 'neumorphic-card p-3 flex flex-col space-y-1';
+                    const date = sale.timestamp.toDate().toLocaleDateString('es-PE');
+                    const time = sale.timestamp.toDate().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                    li.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-700">Total: S/ ${sale.total.toFixed(2)}</span>
+                            <span class="text-xs text-gray-500">Tipo de Pago: ${sale.paymentType}</span>
+                        </div>
+                        <span class="text-xs text-gray-500">Fecha: ${date} - ${time}</span>
+                    `;
+                    clientSalesHistory.appendChild(li);
+                });
+            }
+        }
+
+        // Función para cargar los créditos del cliente
+        async function loadClientCredits() {
+            const clientCreditsList = document.getElementById('client-credits');
+            clientCreditsList.innerHTML = '<li class="text-sm text-gray-400">Cargando créditos...</li>';
+
+            const q = query(collection(db, `artifacts/${appId}/users/${userId}/credits`), where("customerName", "==", currentClient.name));
+            const creditsSnapshot = await getDocs(q);
+            const credits = [];
+            creditsSnapshot.forEach(doc => credits.push({ id: doc.id, ...doc.data() }));
+
+            clientCreditsList.innerHTML = '';
+            if (credits.length === 0) {
+                clientCreditsList.innerHTML = '<li class="text-sm text-gray-400">No hay créditos pendientes para este cliente.</li>';
+            } else {
+                 credits.forEach(credit => {
+                    const li = document.createElement('li');
+                    li.className = 'neumorphic-card p-3 flex justify-between items-center text-sm';
+                    const date = credit.timestamp.toDate().toLocaleDateString('es-PE');
+                    const time = credit.timestamp.toDate().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                    li.innerHTML = `
+                        <div class="flex flex-col">
+                            <span class="font-bold text-gray-700">Deuda: S/ ${credit.total.toFixed(2)}</span>
+                            <span class="text-xs text-gray-500">${date} - ${time}</span>
+                        </div>
+                        <button class="pay-credit-btn neumorphic-button p-2 rounded-full h-8 w-8 text-green-500" data-credit-id="${credit.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
+                    `;
+                    clientCreditsList.appendChild(li);
+                });
+            }
+            // Agregamos el event listener para el botón de pagar
+            clientCreditsList.querySelectorAll('.pay-credit-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    await payCredit(btn.dataset.creditId);
+                    // Actualiza la vista de créditos después de pagar
+                    loadClientCredits();
+                });
+            });
+        }
+        
+        // Genera el mensaje de WhatsApp y muestra el modal
+        function generateWhatsAppMessage() {
+            if (!currentCreditForPDF) {
+                console.error("No hay datos de crédito para generar el mensaje.");
+                return;
+            }
+
+            const clientName = currentCreditForPDF.customerName;
+            const total = currentCreditForPDF.total.toFixed(2);
+            const items = Array.isArray(currentCreditForPDF.items) ? currentCreditForPDF.items : [];
+            const date = currentCreditForPDF.timestamp.toLocaleDateString('es-PE');
+
+            let message = `¡Hola ${clientName}!\n\n`;
+            message += `Te escribo para recordarte sobre tu deuda pendiente con nuestra bodega, registrada el ${date}.\n\n`;
+            message += `Detalle de la deuda:\n`;
+            items.forEach(item => {
+                message += `- ${item.name} (${item.quantity} ${item.unit}) - S/ ${(item.price * item.quantity).toFixed(2)}\n`;
+            });
+            message += `\n*TOTAL PENDIENTE: S/ ${total}*\n\n`;
+            message += `Por favor, ayúdanos a regularizar tu pago. ¡Gracias por tu preferencia!`;
+            
+            document.getElementById('whatsapp-message-text').value = message;
+            
+            // Codificar el mensaje para la URL
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappLink = `https://wa.me/?text=${encodedMessage}`;
+            document.getElementById('open-whatsapp-btn').href = whatsappLink;
+
+            document.getElementById('whatsapp-modal').style.display = 'flex';
+        }
+
+        // Copia el mensaje al portapapeles
+        function copyWhatsAppMessage() {
+            const messageTextarea = document.getElementById('whatsapp-message-text');
+            messageTextarea.select();
+            document.execCommand('copy');
+            showMessage("Mensaje copiado al portapapeles.");
+        }
+
+
+        // Esta es la parte crucial. El código principal del evento se coloca aquí.
+        document.addEventListener('DOMContentLoaded', () => {
+            // Event Listeners
+            const submitProductBtn = document.getElementById('submit-product-btn');
+            const closeDetailBtn = document.getElementById('close-detail-btn');
+            const btnGenerarPdf = document.getElementById('btn-generar-pdf');
+            const btnEnviarWhatsapp = document.getElementById('btn-enviar-whatsapp');
+            const submitClientBtn = document.getElementById('submit-client-btn');
+            const searchClientInput = document.getElementById('search-client-input');
+            const backToClientsBtn = document.getElementById('back-to-clients-btn');
+            const editClientDetailBtn = document.getElementById('edit-client-detail-btn');
+            const deleteClientDetailBtn = document.getElementById('delete-client-detail-btn');
+            const closeWhatsappModalBtn = document.getElementById('close-whatsapp-modal-btn');
+            const copyWhatsappMessageBtn = document.getElementById('copy-whatsapp-message-btn');
+
+
+            const tabHistorial = document.getElementById('tab-historial');
+            const tabCreditosCliente = document.getElementById('tab-creditos-cliente');
+            const historialContent = document.getElementById('historial-content');
+            const creditosClienteContent = document.getElementById('creditos-cliente-content');
+
+            // Listeners para las pestañas de cliente
+            if (tabHistorial) tabHistorial.addEventListener('click', () => {
+                tabHistorial.classList.add('active');
+                tabCreditosCliente.classList.remove('active');
+                historialContent.classList.add('active');
+                creditosClienteContent.classList.remove('active');
+                loadClientSalesHistory();
+            });
+
+            if (tabCreditosCliente) tabCreditosCliente.addEventListener('click', () => {
+                tabCreditosCliente.classList.add('active');
+                tabHistorial.classList.remove('active');
+                historialContent.classList.remove('active');
+                creditosClienteContent.classList.add('active');
+                loadClientCredits();
+            });
+
+
+            if (submitProductBtn) submitProductBtn.addEventListener('click', saveOrUpdateProduct);
+            if (submitClientBtn) submitClientBtn.addEventListener('click', saveOrUpdateClient);
+            if (searchClientInput) searchClientInput.addEventListener('input', () => displayClients(allClients));
+            if (closeDetailBtn) closeDetailBtn.addEventListener('click', () => {
+                document.getElementById('credits-list-container').classList.remove('hidden');
+                document.getElementById('credit-detail-container').classList.add('hidden');
+            });
+            if (btnGenerarPdf) btnGenerarPdf.addEventListener('click', generarPDF);
+            if (btnEnviarWhatsapp) btnEnviarWhatsapp.addEventListener('click', generateWhatsAppMessage);
+            if (closeWhatsappModalBtn) closeWhatsappModalBtn.addEventListener('click', () => {
+                document.getElementById('whatsapp-modal').style.display = 'none';
+            });
+            if (copyWhatsappMessageBtn) copyWhatsappMessageBtn.addEventListener('click', copyWhatsAppMessage);
+            if (backToClientsBtn) backToClientsBtn.addEventListener('click', () => {
+                document.getElementById('client-list-view').classList.remove('hidden');
+                document.getElementById('client-detail-view').classList.add('hidden');
+                resetClientForm();
+                displayClients(allClients);
+            });
+            if (editClientDetailBtn) editClientDetailBtn.addEventListener('click', () => {
+                editClient(currentClient);
+                document.getElementById('client-list-view').classList.remove('hidden');
+                document.getElementById('client-detail-view').classList.add('hidden');
+                // Scroll to form to edit
+                document.getElementById('client-form-title').scrollIntoView({ behavior: 'smooth' });
+            });
+            if (deleteClientDetailBtn) deleteClientDetailBtn.addEventListener('click', async () => {
+                 await deleteClient(currentClient.id);
+                 document.getElementById('client-list-view').classList.remove('hidden');
+                 document.getElementById('client-detail-view').classList.add('hidden');
+            });
+
+            const menuButton = document.getElementById('menu-button');
+            const sideMenu = document.getElementById('side-menu');
+            const overlay = document.getElementById('menu-overlay');
+            const paymentCash = document.getElementById('payment-cash');
+            const paymentCredit = document.getElementById('payment-credit');
+
+            function toggleMenu() {
+                sideMenu.classList.toggle('open');
+                overlay.classList.toggle('visible');
+            }
+
+            function showModule(moduleId) {
+                const modules = document.querySelectorAll('.module');
+                modules.forEach(module => module.classList.add('hidden'));
+                const selectedModule = document.getElementById(`module-${moduleId}`);
+                if (selectedModule) {
+                    selectedModule.classList.remove('hidden');
+                    if (moduleId === 'ventas') {
+                        updateDateTime();
+                        renderCart();
+                    } else if (moduleId === 'creditos') {
+                        listenForCredits();
+                    } else if (moduleId === 'reportes') {
+                        updateReports();
+                    } else if (moduleId === 'clientes') {
+                        document.getElementById('client-list-view').classList.remove('hidden');
+                        document.getElementById('client-detail-view').classList.add('hidden');
+                        listenForClients();
+                    }
+                }
+                toggleMenu();
+            }
+
+            function updateDateTime() {
+                const now = new Date();
+                const date = now.toLocaleDateString('es-PE');
+                const time = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                const saleDatetime = document.getElementById('sale-datetime');
+                if (saleDatetime) saleDatetime.innerText = `${date} ${time}`;
+            }
+
+            if (paymentCash) paymentCash.addEventListener('click', () => {
+                document.getElementById('payment-cash').classList.add('active');
+                document.getElementById('payment-credit').classList.remove('active');
+            });
+
+            if (paymentCredit) paymentCredit.addEventListener('click', () => {
+                document.getElementById('payment-credit').classList.add('active');
+                document.getElementById('payment-cash').classList.remove('active');
+            });
+
+            if (menuButton) menuButton.addEventListener('click', toggleMenu);
+            if (overlay) overlay.addEventListener('click', toggleMenu);
+
+            const sideMenuDivs = document.querySelectorAll('#side-menu [data-module]');
+            sideMenuDivs.forEach(div => {
+                div.addEventListener('click', (event) => {
+                    const moduleDiv = event.target.closest('[data-module]');
+                    if (moduleDiv) {
+                        showModule(moduleDiv.dataset.module);
+                    }
+                });
+            });
+
+            // Función para mostrar un mensaje al usuario
+            let messageTimeout;
+            function showMessage(text, duration = 3000) {
+                const messageModal = document.querySelector('.message-modal');
+                if (messageModal) {
+                    messageModal.textContent = text;
+                    messageModal.classList.add('show');
+                    clearTimeout(messageTimeout);
+                    messageTimeout = setTimeout(() => {
+                        messageModal.classList.remove('show');
+                    }, duration);
+                }
+            }
+
+
+            // Iniciar la aplicación después de que el DOM esté cargado
+            (async () => {
+                userId = await authenticateUser();
+                if (userId && db) {
+                    listenForProducts();
+                    listenForSales(); // Inicia el listener para las ventas
+                    listenForClients(); // Inicia el listener para los clientes
+                }
+                updateDateTime();
+            })();
+        });
+    </script>
+</body>
+</html>
